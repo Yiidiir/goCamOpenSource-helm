@@ -2,9 +2,9 @@
 replicaCount: 1
 
 image:
-  # Publish the Docker image to a registry accessible to your cluster.
-  repository: gocam
-  tag: production
+  # Published and tested for AMD64 and ARM64 by this repository's Docker workflow.
+  repository: ghcr.io/yiidiir/gocamopensource-helm
+  tag: sha-3ed7b4c64291660cbd987ba83527deb803960059
   # A digest takes precedence over the tag when set.
   digest: ""
   pullPolicy: IfNotPresent

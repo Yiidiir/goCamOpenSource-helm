@@ -1,8 +1,4 @@
-# Set the image repository/tag to a release you have published.
-image:
-  repository: registry.example.com/team/gocam
-  tag: YOUR_RELEASE
-
+# Uses the chart's published image by default.
 secret:
   existingSecret: gocam-secrets
 

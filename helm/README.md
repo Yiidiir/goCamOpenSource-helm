@@ -2,9 +2,10 @@
 
 This chart deploys the repository's Docker image with a ClusterIP Service,
 optional HTTPS Ingress, and a `helm test` health probe. It requires Helm 3.17+
-and Kubernetes 1.25+. Cluster nodes need access to an image you have built and
-published; `gocam:production` is a local image name, not an upstream registry
-release. Use the [Docker guide](../docs/docker.md) to publish your image first.
+and Kubernetes 1.25+. The chart defaults to the tested AMD64/ARM64 image published
+by this repository at `ghcr.io/yiidiir/gocamopensource-helm`, pinned to a full
+commit tag. No application image build is required to install it. The
+[Docker guide](../docs/docker.md#published-images) describes publishing and updates.
 
 ## Install
 
@@ -31,10 +32,10 @@ file private. Secret values are never passed through Helm values or generated
 by this chart. Custom Secret field names are supported by `secret.*Key`.
 
 Copy `helm/values-production.example.yaml` to a file outside the chart and edit
-the image, public hostname, ingress class, proxy trust, and TLS Secret name:
+the public hostname, ingress class, proxy trust, and TLS Secret name:
 
 ```sh
-helm upgrade --install gocam gocam/gocam --version 0.1.0 \
+helm upgrade --install gocam gocam/gocam --version 0.1.1 \
   --namespace verification \
   -f /path/to/values-production.yaml \
   --wait --timeout 5m
@@ -88,7 +89,7 @@ previous release's manifests, not its sessions or externally managed secrets.
 
 | Value | Default | Purpose |
 | --- | --- | --- |
-| `image.repository`, `image.tag` | `gocam`, `production` | Image built from this repository; set your registry release. |
+| `image.repository`, `image.tag` | `ghcr.io/yiidiir/gocamopensource-helm`, pinned `sha-...` tag | Tested multi-platform image published by this repository. |
 | `image.digest` | empty | Optional `sha256:...`; takes precedence over the tag. |
 | `image.pullPolicy` | `IfNotPresent` | Use immutable tags/digests; `Never` is useful for preloaded local images. |
 | `imagePullSecrets` | `[]` | List of `{name: registry-secret}` references. |
@@ -113,7 +114,7 @@ previous release's manifests, not its sessions or externally managed secrets.
 
 For a local cluster with the image already loaded, disable ingress and set
 `config.protocol=http`, `config.host=localhost`, `config.trustProxy="0"`, and
-`image.pullPolicy=Never`. After installing, run
+`image.repository=gocam`, `image.tag=production`, and `image.pullPolicy=Never`. After installing, run
 `kubectl -n verification port-forward service/gocam 3300:80` and open
 `http://localhost:3300`. The Secret is still required.
 
