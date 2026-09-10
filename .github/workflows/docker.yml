@@ -1,0 +1,36 @@
+name: Docker
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Build production image
+        run: docker build --pull -t gocam:production .
+      - name: Test production image
+        run: node script/docker-smoke-test.mjs
+      - name: Audit production dependencies
+        run: |
+          docker build --target dependencies -t gocam:dependencies .
+          docker run --rm gocam:dependencies npm audit --omit=dev
+      - name: Validate Compose configuration
+        env:
+          ENCRYPTION_KEY: ci-only-placeholder-not-a-secret!
+          SESSION_SECRET: ci-only-placeholder-not-a-secret!
+        run: docker compose config --quiet
