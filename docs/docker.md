@@ -1,5 +1,7 @@
 # Running with Docker
 
+For Kubernetes deployments, use the [Helm chart](../helm/README.md).
+
 The multi-stage image builds the backend, frontend JavaScript, and CSS from source
 with `npm ci` on Node.js 24 LTS. The runtime contains production dependencies,
 compiled code, templates, vendor libraries, and the face/OCR model assets. It runs

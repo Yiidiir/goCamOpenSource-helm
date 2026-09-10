@@ -1,0 +1,128 @@
+# goCam Helm chart
+
+This chart deploys the repository's Docker image with a ClusterIP Service,
+optional HTTPS Ingress, and a `helm test` health probe. It requires Helm 3.17+
+and Kubernetes 1.25+. Cluster nodes need access to an image you have built and
+published; `gocam:production` is a local image name, not an upstream registry
+release. Use the [Docker guide](../docs/docker.md) to publish your image first.
+
+## Install
+
+Create the namespace and provision a Secret there using your secret manager or
+an environment file containing only `ENCRYPTION_KEY` and `SESSION_SECRET`:
+
+```sh
+kubectl create namespace verification
+kubectl -n verification create secret generic gocam-secrets \
+  --from-env-file=/secure/path/gocam-secrets.env
+```
+
+Generate the encryption key with `openssl rand -hex 16` (32 ASCII bytes for
+AES-256-CBC) and a separate session secret with `openssl rand -hex 32`. Configure
+the same encryption key in your integrating application. Keep the environment
+file private. Secret values are never passed through Helm values or generated
+by this chart. Custom Secret field names are supported by `secret.*Key`.
+
+Copy `helm/values-production.example.yaml` to a file outside the chart and edit
+the image, public hostname, ingress class, proxy trust, and TLS Secret name:
+
+```sh
+helm upgrade --install gocam ./helm \
+  --namespace verification \
+  -f /path/to/values-production.yaml \
+  --wait --timeout 5m
+helm test gocam --namespace verification --logs
+```
+
+The ingress controller and DNS must already be configured. Provide a TLS Secret
+in the release namespace, or use controller/cert-manager annotations to provision
+the named certificate. The chart does not install a controller or certificate
+manager. Ingress uses `config.host` for both routing and TLS, and serves the
+application at `/`; path-prefix rewriting is unsupported by the application.
+
+The backend always uses plain HTTP. `config.protocol: https` enables secure
+session cookies. The proxy must overwrite `X-Forwarded-Proto`/`X-Forwarded-For`
+and preserve `Host`. Set `config.trustProxy: "1"` only with exactly one trusted
+proxy; otherwise configure the correct hop count or proxy IP/subnet list. Restrict
+direct pod/Service access to trusted callers using your cluster's NetworkPolicy
+or equivalent controls. If TLS terminates upstream of the ingress controller,
+you can disable `ingress.tls.enabled` while keeping `config.protocol: https`,
+provided trusted forwarding headers correctly describe the external HTTPS URL.
+
+## Application limits and upgrades
+
+The chart requires `replicaCount: 1`, uses a `Recreate` Deployment strategy, and
+does not provide autoscaling. Rolling updates would send requests to independent
+in-memory session stores. Upgrades have downtime, and pod replacement loses
+active verification sessions and used-payload state. Express MemoryStore and
+the application stores still require replacement for sustained production use;
+the chart does not add durability or fix their unbounded growth.
+
+The container runs as UID/GID 1000 with a read-only root filesystem, dropped
+capabilities, and no service-account token. Writable `/tmp` and `/app/log` use
+size-limited memory-backed `emptyDir` volumes with `fsGroup: 1000`. These consume
+pod memory and disappear when the pod is removed; callback logs are only for the
+example endpoint. The 30-second termination grace period allows the application's
+25-second HTTP shutdown timeout. Startup, readiness, and liveness probes use
+`/healthz`. They check HTTP availability, not camera verification or callbacks.
+
+Use a new immutable image tag or `image.digest` for every release. Changing
+application values changes the pod template and triggers replacement. Changing
+the contents of an external Secret does not automatically restart the pod; after
+rotating it, run `kubectl rollout restart deployment/gocam -n verification`
+(substitute your release's Deployment name if different). All such restarts lose
+in-memory state. `helm rollback gocam REVISION -n verification --wait` restores a
+previous release's manifests, not its sessions or externally managed secrets.
+
+## Values
+
+| Value | Default | Purpose |
+| --- | --- | --- |
+| `image.repository`, `image.tag` | `gocam`, `production` | Image built from this repository; set your registry release. |
+| `image.digest` | empty | Optional `sha256:...`; takes precedence over the tag. |
+| `image.pullPolicy` | `IfNotPresent` | Use immutable tags/digests; `Never` is useful for preloaded local images. |
+| `imagePullSecrets` | `[]` | List of `{name: registry-secret}` references. |
+| `secret.existingSecret` | `gocam-secrets` | Required existing Secret in the release namespace. |
+| `secret.encryptionKeyKey` | `ENCRYPTION_KEY` | Field containing the raw AES key. |
+| `secret.sessionSecretKey` | `SESSION_SECRET` | Field containing the session signing secret. |
+| `config.host` | `localhost` | Public hostname; required for ingress. |
+| `config.port` | `3300` | Container HTTP port; probes and Service follow it. |
+| `config.protocol` | `https` | External scheme; use `http` only for localhost tests. |
+| `config.trustProxy` | `"0"` | Proxy trust disabled until configured. Must be a string. |
+| `config.encryptionAlgorithm` | `aes-256-cbc` | Must match the integration and key length. |
+| `config.enableFrontendDebug` | `false` | Enables frontend debugging when true. |
+| `service.port` | `80` | ClusterIP Service port. |
+| `ingress.enabled` | `false` | Creates an Ingress for `config.host` at `/`. |
+| `ingress.className`, `ingress.annotations` | empty, `{}` | Controller selection and configuration. |
+| `ingress.tls.enabled`, `ingress.tls.secretName` | `true`, empty | Certificate configuration when ingress is enabled. |
+| `resources` | requests `100m`/`128Mi`, limits `1`/`512Mi` | Tune CPU and memory to workload. |
+| `podAnnotations`, `service.annotations` | `{}` | Custom metadata. |
+| `nodeSelector`, `affinity`, `tolerations` | empty | Pod scheduling configuration. |
+| `nameOverride`, `fullnameOverride` | empty | Override chart/resource names. |
+| `tests.enabled` | `true` | Include the `helm test` hook Pod. |
+
+For a local cluster with the image already loaded, disable ingress and set
+`config.protocol=http`, `config.host=localhost`, `config.trustProxy="0"`, and
+`image.pullPolicy=Never`. After installing, run
+`kubectl -n verification port-forward service/gocam 3300:80` and open
+`http://localhost:3300`. The Secret is still required.
+
+## Validate and package
+
+These checks run locally without contacting a Kubernetes cluster:
+
+```sh
+helm lint --strict helm
+helm lint --strict helm -f helm/values-production.example.yaml
+python3 -m pip install PyYAML
+python3 script/helm-test.py
+helm template gocam helm -f helm/values-production.example.yaml
+helm package helm --destination /tmp
+```
+
+The render tests cover selectors, ports, secret references, ingress/TLS,
+image digests, pod security, and invalid values. `helm test` runs only when
+explicitly invoked after installation, checks the Service's `/healthz` using the
+same application image, and needs no application secrets or additional image.
+The Helm GitHub Actions workflow lints, runs the render tests, and packages the
+chart for pull requests without cluster credentials.

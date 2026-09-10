@@ -62,6 +62,13 @@ one replica, active sessions lost on restart, and storage work required for
 sustained production use. With `NODE_ENV=production`, a unique `ENCRYPTION_KEY`
 and a `SESSION_SECRET` of at least 32 bytes are required at startup.
 
+## Kubernetes / Helm
+
+The [Helm chart](helm/README.md) in `helm/` deploys the Docker image with an existing
+Kubernetes Secret, health probes, a ClusterIP Service, and optional HTTPS ingress.
+It enforces a single replica and uses `Recreate` upgrades for the application's
+in-memory storage. See the chart guide for installation and configuration.
+
 ## Example implementation
 
 By running this project you will be able to go through both types of verification flows: using a redirect or a iframe overlay.

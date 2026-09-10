@@ -1,0 +1,35 @@
+name: Helm
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: azure/setup-helm@v5
+        with:
+          # Test the chart's minimum supported Helm version.
+          version: v3.17.1
+      - name: Install render-test dependency
+        run: |
+          python3 -m venv /tmp/helm-tests
+          /tmp/helm-tests/bin/python -m pip install PyYAML==6.0.3
+      - name: Lint chart and production example
+        run: |
+          helm lint --strict helm
+          helm lint --strict helm -f helm/values-production.example.yaml
+      - name: Test rendered Kubernetes resources
+        run: /tmp/helm-tests/bin/python script/helm-test.py
+      - name: Package chart
+        run: helm package helm --destination /tmp

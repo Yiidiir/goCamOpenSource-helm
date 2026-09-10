@@ -1,0 +1,59 @@
+# The application's in-memory stores support only one replica.
+replicaCount: 1
+
+image:
+  # Publish the Docker image to a registry accessible to your cluster.
+  repository: gocam
+  tag: production
+  # A digest takes precedence over the tag when set.
+  digest: ""
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+# This chart references a Secret; it never generates or stores secret values.
+# The Secret must exist in the Helm release's namespace before installation.
+secret:
+  existingSecret: gocam-secrets
+  encryptionKeyKey: ENCRYPTION_KEY
+  sessionSecretKey: SESSION_SECRET
+
+config:
+  host: localhost
+  port: 3300
+  protocol: https
+  # Set to "1" behind exactly one trusted ingress proxy, or use its IP/subnets.
+  trustProxy: "0"
+  encryptionAlgorithm: aes-256-cbc
+  enableFrontendDebug: false
+
+service:
+  port: 80
+  annotations: {}
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  # Routes config.host at /; the app requires deployment at the URL root.
+  tls:
+    enabled: true
+    secretName: ""
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: "1"
+    memory: 512Mi
+
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+tests:
+  enabled: true
