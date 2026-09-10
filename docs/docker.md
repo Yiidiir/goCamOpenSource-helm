@@ -140,5 +140,21 @@ The tests run with a read-only filesystem and dropped capabilities, check health
 render pages and encrypted payloads, verify compiled assets/models, check proxy
 session cookies and secret validation, and confirm clean shutdown on SIGTERM.
 They use temporary containers and generated test secrets. GitHub Actions runs the
-same build and smoke tests on native AMD64 and ARM64 runners for pull requests;
-it does not publish images or require registry credentials.
+same build and smoke tests on native AMD64 and ARM64 runners for pull requests.
+Publishing runs only on `main`, as described below.
+
+## Published images
+
+The Docker workflow builds and smoke-tests native AMD64 and ARM64 images. On
+`main`, each passing job pushes its tested image to GHCR with the repository's
+`GITHUB_TOKEN`. After both jobs pass, the publishing job creates a multi-platform
+image at `ghcr.io/yiidiir/gocamopensource-helm:sha-<full-commit-sha>` and updates
+`latest`. Pull requests run the checks without publishing. No personal registry
+credentials are needed in CI. The OCI source label links the image to this repo.
+
+After the first publish, set the GHCR package's visibility to **Public** in the
+repository owner's package settings so clusters can pull it anonymously. Until
+then, the cluster needs a registry Secret whose token can read this package.
+Use the full commit tag or manifest digest for deployments; `latest` is intended
+for evaluation. When releasing a new default image in the Helm chart, update its
+image tag/digest and increment the chart version after the Docker workflow passes.
