@@ -8,6 +8,13 @@ release. Use the [Docker guide](../docs/docker.md) to publish your image first.
 
 ## Install
 
+Add the published chart repository:
+
+```sh
+helm repo add gocam https://yiidiir.github.io/goCamOpenSource-helm
+helm repo update
+```
+
 Create the namespace and provision a Secret there using your secret manager or
 an environment file containing only `ENCRYPTION_KEY` and `SESSION_SECRET`:
 
@@ -27,12 +34,15 @@ Copy `helm/values-production.example.yaml` to a file outside the chart and edit
 the image, public hostname, ingress class, proxy trust, and TLS Secret name:
 
 ```sh
-helm upgrade --install gocam ./helm \
+helm upgrade --install gocam gocam/gocam --version 0.1.0 \
   --namespace verification \
   -f /path/to/values-production.yaml \
   --wait --timeout 5m
 helm test gocam --namespace verification --logs
 ```
+
+Use `./helm` instead of `gocam/gocam` (and omit `--version`) to install directly
+from this checkout.
 
 The ingress controller and DNS must already be configured. Provide a TLS Secret
 in the release namespace, or use controller/cert-manager annotations to provision
@@ -126,3 +136,28 @@ explicitly invoked after installation, checks the Service's `/healthz` using the
 same application image, and needs no application secrets or additional image.
 The Helm GitHub Actions workflow lints, runs the render tests, and packages the
 chart for pull requests without cluster credentials.
+
+## Publish chart releases
+
+On `main`, the Helm workflow publishes when the repository Actions variable
+`HELM_PUBLISH_ENABLED` is set to `true`. After the lint/render job passes,
+chart-releaser creates a GitHub release such as `gocam-0.1.0`, uploads the packaged
+chart, and updates `index.yaml` on the `gh-pages` branch. The workflow then deploys
+that index to GitHub Pages using the built-in `GITHUB_TOKEN`; no personal token
+or registry password is needed in CI. Pull requests never publish.
+
+The repository URL is `https://yiidiir.github.io/goCamOpenSource-helm`. Packages
+are served from GitHub release assets and referenced by the Pages index. Previous
+chart versions remain available. Increment `version` in `helm/Chart.yaml` for
+each chart release; an existing version is skipped rather than overwritten.
+Update `appVersion` when the packaged application version changes. Rerun the
+Helm workflow on `main` using `workflow_dispatch` to retry a failed publication.
+
+For a fork, first create an empty `gh-pages` branch, enable Pages with **GitHub
+Actions** as its source in repository settings, and set `HELM_PUBLISH_ENABLED`
+to `true`. The publishing job derives the release/index destination from the
+current repository; update the documented repository URL for your fork. The
+opt-in variable keeps publishing disabled for upstream repositories and forks
+that have not configured Pages. The job needs `contents: write`, `pages: write`,
+and `id-token: write`, scoped to publishing only. Publishing a chart does not
+build/push its application image or deploy to a Kubernetes cluster.
