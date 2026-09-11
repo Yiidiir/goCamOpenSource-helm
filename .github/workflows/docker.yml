@@ -39,6 +39,8 @@ jobs:
             --label "org.opencontainers.image.revision=${GITHUB_SHA}" .
       - name: Test production image
         run: node script/docker-smoke-test.mjs
+      - name: Test external API integration
+        run: node script/api-integration-smoke-test.mjs
       - name: Audit production dependencies
         run: |
           docker build --target dependencies -t gocam:dependencies .

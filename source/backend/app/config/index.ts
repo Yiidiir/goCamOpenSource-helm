@@ -10,6 +10,17 @@ const encryptionAlgorithm = process.env.ENCRYPTION_ALGORITHM || 'aes-256-cbc';
 const httpServerPort = Number(process.env.HTTP_SERVER_PORT || 3300);
 const httpServerProtocol = process.env.HTTP_SERVER_PROTOCOL || 'http';
 const trustProxy = process.env.TRUST_PROXY || '';
+const apiIntegration = process.env.API_INTEGRATION === 'true';
+const callbackSecret = process.env.CALLBACK_WEBHOOK_SECRET || '';
+const callbackSecretHeader = process.env.CALLBACK_SECRET_HEADER || 'x-gocam-callback-secret';
+const callbackAllowedOrigins = (process.env.CALLBACK_ALLOWED_ORIGINS || '').split(',').filter(Boolean);
+const callbackAllowedHostSuffixes = (process.env.CALLBACK_ALLOWED_HOST_SUFFIXES || '').split(',').filter(Boolean);
+if (apiIntegration && (!callbackSecret || !callbackAllowedOrigins.length)) {
+	throw new Error('API integration requires CALLBACK_WEBHOOK_SECRET and CALLBACK_ALLOWED_ORIGINS');
+}
+if (!/^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/.test(callbackSecretHeader)) {
+	throw new Error('CALLBACK_SECRET_HEADER must be a valid HTTP header name');
+}
 
 if (!Number.isInteger(httpServerPort) || httpServerPort < 1 || httpServerPort > 65535) {
 	throw new Error('HTTP_SERVER_PORT must be an integer between 1 and 65535');
@@ -32,6 +43,11 @@ if (production) {
 }
 
 const configObject = {
+	apiIntegration,
+	callbackSecret,
+	callbackSecretHeader,
+	callbackAllowedOrigins,
+	callbackAllowedHostSuffixes,
 
 	httpServerProtocol: httpServerProtocol,
 	httpServerHost    : process.env.HTTP_SERVER_HOST || 'localhost',

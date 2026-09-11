@@ -93,7 +93,16 @@ try {
   const tokenHtml = await token.text();
   assert.match(tokenHtml, /AvsToken.main/);
   assert.ok(!tokenHtml.includes('id="debugArea"'), 'false must disable frontend debugging');
-  const iframe = await request(`/token/iframeRender?d=${encodeURIComponent(payload.content.payload)}`,
+  const iframePayload = (await (await request('/getVerificationPayloadAndUrl', {
+    method: 'POST',
+    body: new URLSearchParams({
+      colorConfigBodyBackgroundInput: '#ffffff', colorConfigBodyForegroundInput: '#000000',
+      colorConfigButtonBackgroundInput: '#ffffff', colorConfigButtonForegroundInput: '#000000',
+      colorConfigButtonForegroundCTAInput: '#000000',
+      callbackUrl: `${baseUrl}/callback`, demoPageUrl: `${baseUrl}/`,
+    }),
+  })).json()).content.payload;
+  const iframe = await request(`/token/iframeRender?d=${encodeURIComponent(iframePayload)}`,
     { headers: { 'X-Forwarded-Proto': 'https' } });
   assert.match(await iframe.text(), /AvsToken.main/);
 

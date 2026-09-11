@@ -69,6 +69,23 @@ class HelmChartTest(unittest.TestCase):
         for volume in pod["spec"]["volumes"]:
             self.assertEqual(volume["emptyDir"], {"medium": "Memory", "sizeLimit": "16Mi"})
 
+    def test_api_integration(self):
+        manifests = render({
+            "secret": {"callbackSecretKey": "CALLBACK_SECRET"},
+            "config": {"apiIntegration": True,
+                       "callbackSecretHeader": "x-consumer-webhook-secret",
+                       "callbackAllowedOrigins": ["https://backend.example.com"],
+                       "callbackAllowedHostSuffixes": [".preview.example.com"]},
+        })
+        container = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]
+        env = {entry["name"]: entry for entry in container["env"]}
+        self.assertEqual(env["API_INTEGRATION"]["value"], "true")
+        self.assertEqual(env["CALLBACK_SECRET_HEADER"]["value"], "x-consumer-webhook-secret")
+        self.assertEqual(env["CALLBACK_ALLOWED_ORIGINS"]["value"], "https://backend.example.com")
+        self.assertEqual(env["CALLBACK_WEBHOOK_SECRET"]["valueFrom"]["secretKeyRef"],
+                         {"name": "gocam-secrets", "key": "CALLBACK_SECRET"})
+        render({"config": {"apiIntegration": True}}, expect_failure=True)
+
     def test_production_ingress(self):
         values = yaml.safe_load((ROOT / "helm/values-production.example.yaml").read_text())
         manifests = render(values)

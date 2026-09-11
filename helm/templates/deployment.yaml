@@ -45,6 +45,21 @@ spec:
               containerPort: {{ .Values.config.port }}
               protocol: TCP
           env:
+            - name: API_INTEGRATION
+              value: {{ .Values.config.apiIntegration | quote }}
+            - name: CALLBACK_SECRET_HEADER
+              value: {{ .Values.config.callbackSecretHeader | quote }}
+            - name: CALLBACK_ALLOWED_ORIGINS
+              value: {{ join "," .Values.config.callbackAllowedOrigins | quote }}
+            - name: CALLBACK_ALLOWED_HOST_SUFFIXES
+              value: {{ join "," .Values.config.callbackAllowedHostSuffixes | quote }}
+            {{- if .Values.config.apiIntegration }}
+            - name: CALLBACK_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret.existingSecret | quote }}
+                  key: {{ .Values.secret.callbackSecretKey | quote }}
+            {{- end }}
             - name: NODE_ENV
               value: production
             - name: HTTP_BIND_ADDRESS

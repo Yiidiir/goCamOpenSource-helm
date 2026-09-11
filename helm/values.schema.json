@@ -36,7 +36,8 @@
       "properties": {
         "existingSecret": { "$ref": "#/definitions/nonEmptyString" },
         "encryptionKeyKey": { "$ref": "#/definitions/nonEmptyString" },
-        "sessionSecretKey": { "$ref": "#/definitions/nonEmptyString" }
+        "sessionSecretKey": { "$ref": "#/definitions/nonEmptyString" },
+        "callbackSecretKey": { "type": "string" }
       }
     },
     "config": {
@@ -49,7 +50,11 @@
         "protocol": { "enum": ["http", "https"] },
         "trustProxy": { "$ref": "#/definitions/nonEmptyString" },
         "encryptionAlgorithm": { "$ref": "#/definitions/nonEmptyString" },
-        "enableFrontendDebug": { "type": "boolean" }
+        "enableFrontendDebug": { "type": "boolean" },
+        "apiIntegration": { "type": "boolean" },
+        "callbackSecretHeader": { "type": "string", "pattern": "^[!#$%&'*+\\-.^_`|~0-9A-Za-z]+$" },
+        "callbackAllowedOrigins": { "type": "array", "items": { "type": "string", "pattern": "^https?://[^/]+$" } },
+        "callbackAllowedHostSuffixes": { "type": "array", "items": { "type": "string", "pattern": "^\\.[a-zA-Z0-9.-]+$" } }
       }
     },
     "service": {
@@ -100,6 +105,13 @@
     }
   },
   "required": ["replicaCount", "image", "secret", "config", "service", "ingress", "tests"],
+  "allOf": [{
+    "if": { "properties": { "config": { "properties": { "apiIntegration": { "const": true } } } } },
+    "then": { "properties": {
+      "secret": { "properties": { "callbackSecretKey": { "minLength": 1 } } },
+      "config": { "properties": { "callbackAllowedOrigins": { "minItems": 1 } } }
+    } }
+  }],
   "definitions": {
     "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
     "nonEmptyString": { "type": "string", "minLength": 1 },

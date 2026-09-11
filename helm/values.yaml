@@ -19,6 +19,7 @@ secret:
   existingSecret: gocam-secrets
   encryptionKeyKey: ENCRYPTION_KEY
   sessionSecretKey: SESSION_SECRET
+  callbackSecretKey: ""
 
 config:
   host: localhost
@@ -28,6 +29,10 @@ config:
   trustProxy: "0"
   encryptionAlgorithm: aes-256-cbc
   enableFrontendDebug: false
+  apiIntegration: false
+  callbackSecretHeader: x-gocam-callback-secret
+  callbackAllowedOrigins: []
+  callbackAllowedHostSuffixes: []
 
 service:
   port: 80

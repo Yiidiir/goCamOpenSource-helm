@@ -162,3 +162,26 @@ opt-in variable keeps publishing disabled for upstream repositories and forks
 that have not configured Pages. The job needs `contents: write`, `pages: write`,
 and `id-token: write`, scoped to publishing only. Publishing a chart does not
 build/push its application image or deploy to a Kubernetes cluster.
+
+## External API integration
+
+Set `config.apiIntegration: true`, `secret.callbackSecretKey` to an existing
+Secret field, and `config.callbackAllowedOrigins` to the HTTPS origins of the
+consumer backend. `config.callbackAllowedHostSuffixes` can additionally allow
+owned preview domains (e.g. `.preview.example.com`); suffix matches require HTTPS.
+Set `config.callbackSecretHeader` to the HTTP header that the consumer validates.
+The API rejects callbacks outside that allowlist, and delivery does not follow
+redirects or log the webhook credential.
+
+In this mode, `/getVerificationPayloadAndUrl` accepts a form
+without `demoPageUrl`, uses the configured public hostname/protocol for browser
+URLs, and returns a JSON string containing a positive 32-bit `sessionId` in
+`content.payload`. The URL's `d` query still contains the encrypted verification
+payload. The same ID is used in the webhook, with the configured secret header.
+The ID is allocated before the browser opens so API consumers can persist it and
+correlate the callback. The default mode continues to return the encrypted
+payload for the standalone demo integration.
+
+Verification links expire ten minutes after creation and cannot be opened twice.
+The chart retains the most recent health-test Pod until the next `helm test`, so
+`helm test --logs` can retrieve its output.
