@@ -4,7 +4,7 @@ replicaCount: 1
 image:
   # Published and tested for AMD64 and ARM64 by this repository's Docker workflow.
   repository: ghcr.io/yiidiir/gocamopensource-helm
-  tag: sha-3ed7b4c64291660cbd987ba83527deb803960059
+  tag: sha-62bbcdc02bc83b51d263a3b2901477bac8457aaf
   # A digest takes precedence over the tag when set.
   digest: ""
   pullPolicy: IfNotPresent
