@@ -3,6 +3,21 @@ entries:
   gocam:
   - apiVersion: v2
     appVersion: 1.0.0
+    created: "2026-10-23T19:41:42.180125342Z"
+    description: Deploy the goCam age verification application
+    digest: 30b640d6d2257b27d4bee7b92404aedc4d0a859b7507561ec663e3fb47593247
+    home: https://github.com/Yiidiir/goCamOpenSource-helm
+    kubeVersion: '>=1.25.0-0'
+    name: gocam
+    sources:
+    - https://github.com/Yiidiir/goCamOpenSource-helm
+    - https://github.com/Godotcam/goCamOpenSource
+    type: application
+    urls:
+    - https://github.com/Yiidiir/goCamOpenSource-helm/releases/download/gocam-0.1.6/gocam-0.1.6.tgz
+    version: 0.1.6
+  - apiVersion: v2
+    appVersion: 1.0.0
     created: "2026-10-23T19:20:28.784361897Z"
     description: Deploy the goCam age verification application
     digest: 44c537a51582ccb2d7d861c3670aa8294162de15d359971780e0725351f17c3e
@@ -76,4 +91,4 @@ entries:
     urls:
     - https://github.com/Yiidiir/goCamOpenSource-helm/releases/download/gocam-0.1.0/gocam-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-23T19:20:28.784380953Z"
+generated: "2026-10-23T19:41:42.180151832Z"
